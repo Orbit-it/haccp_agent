@@ -1,0 +1,7 @@
+node_modules/
+package-lock.json
+agent-config.json
+data/
+versions/
+*.log
+.env
