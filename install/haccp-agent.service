@@ -1,0 +1,24 @@
+[Unit]
+Description=HACCP Local Agent (pont imprimantes réseau/USB/Bluetooth)
+After=network-online.target bluetooth.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=haccp-agent
+Group=haccp-agent
+WorkingDirectory=/opt/haccp-agent
+EnvironmentFile=/opt/haccp-agent/agent.env
+ExecStart=/usr/bin/env node /opt/haccp-agent/src/launcher.js
+Restart=always
+RestartSec=5
+
+# Nécessaire pour que `rfcomm bind` (transport Bluetooth SPP) fonctionne
+# sans exécuter tout le service en root.
+AmbientCapabilities=CAP_NET_ADMIN CAP_NET_RAW
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/haccp-agent
+
+[Install]
+WantedBy=multi-user.target
