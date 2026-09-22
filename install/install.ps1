@@ -62,8 +62,11 @@ Write-Host "==> Préparation du dossier de données ($DataDir)..."
 $StateDir = $DataDir
 New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
 # Ceinture et bretures : force l'accès complet à SYSTEM et Administrateurs,
-# au cas où l'ACL héritée du parent serait restrictive.
-icacls $StateDir /grant "SYSTEM:(OI)(CI)F" "BUILTIN\Administrators:(OI)(CI)F" /T | Out-Null
+# au cas où l'ACL héritée du parent serait restrictive. On utilise les SID
+# (*S-1-5-18 = SYSTEM, *S-1-5-32-544 = Administrateurs) plutôt que les noms
+# "SYSTEM"/"BUILTIN\Administrators" : ces noms sont localisés (ex: "Administrateurs"
+# sur un Windows en français) et icacls échoue silencieusement sinon.
+icacls $StateDir /grant "*S-1-5-18:(OI)(CI)F" "*S-1-5-32-544:(OI)(CI)F" /T | Out-Null
 
 # --- NSSM (Non-Sucking Service Manager) : wrapper de service pour un exécutable classique ---
 $NssmPath = Join-Path $InstallDir "nssm.exe"
