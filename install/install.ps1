@@ -3,7 +3,7 @@
 # Usage (PowerShell en Administrateur) :
 #   .\install\install.ps1 -BackendUrl "https://votre-backend.example.com" `
 #                          -AgentKey "<clé fournie par le backend>" `
-#                          [-AgentName "Nom de l'agent"] [-InstallDir "C:\Program Files\HaccpAgent"]
+#                          [-AgentName "Nom de l'agent"] [-InstallDir "C:\HaccpAgent"]
 #
 # Doit être exécuté depuis la racine du dépôt agent (déjà cloné / extrait
 # d'une release), avec Node.js >= 18 installé sur la machine.
@@ -12,7 +12,11 @@ param(
   [Parameter(Mandatory=$true)] [string]$BackendUrl,
   [Parameter(Mandatory=$true)] [string]$AgentKey,
   [string]$AgentName = $env:COMPUTERNAME,
-  [string]$InstallDir = "C:\Program Files\HaccpAgent",
+  # Volontairement sans espace dans le chemin par défaut : NSSM 2.24 ne
+  # gère pas de façon fiable les arguments contenant des espaces passés
+  # depuis PowerShell (les guillemets se perdent en route), ce qui casse
+  # le lancement de "src\launcher.js" si le dossier est sous "Program Files".
+  [string]$InstallDir = "C:\HaccpAgent",
   # Les données mutables (file d'impression, config, logs) ne vont PAS sous
   # Program Files : ce dossier est prévu pour du contenu en lecture seule et
   # certaines machines (durcissement sécurité, antivirus) refusent la création
@@ -34,6 +38,11 @@ function Assert-Admin {
 }
 
 Assert-Admin
+
+if ($InstallDir -match ' ') {
+  Write-Error "InstallDir ne doit pas contenir d'espace (NSSM 2.24 ne passe pas correctement les arguments avec espaces depuis PowerShell). Utilisez par ex. C:\HaccpAgent au lieu de $InstallDir."
+  exit 1
+}
 
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) {
   Write-Error "Node.js n'est pas installé. Installez Node.js >= 18 depuis https://nodejs.org avant de continuer."
@@ -91,7 +100,12 @@ if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
 }
 
 $NodeExe = (Get-Command node).Source
-& $NssmPath install $ServiceName $NodeExe "`"$InstallDir\src\launcher.js`""
+# Pas de guillemets manuels ici : $InstallDir est garanti sans espace (cf.
+# vérification plus haut), donc pas besoin d'en ajouter et de risquer que
+# PowerShell les perde en route vers nssm.exe (comportement observé peu fiable
+# avec NSSM 2.24 dès qu'on essaie d'embarquer des guillemets littéraux).
+$LauncherPath = "$InstallDir\src\launcher.js"
+& $NssmPath install $ServiceName $NodeExe $LauncherPath
 if ($LASTEXITCODE -ne 0) {
   Write-Error "nssm install a échoué (code $LASTEXITCODE). Vérifiez qu'aucune fenêtre 'Services' ou 'gestionnaire de tâches' ne bloque le service, puis relancez."
   exit 1

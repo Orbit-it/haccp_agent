@@ -2,7 +2,7 @@
 # Usage (PowerShell Administrateur) : .\install\uninstall.ps1 [-Purge]
 
 param(
-  [string]$InstallDir = "C:\Program Files\HaccpAgent",
+  [string]$InstallDir = "C:\HaccpAgent",
   [string]$DataDir = "C:\ProgramData\HaccpAgent",
   [string]$ServiceName = "HaccpAgent",
   [switch]$Purge

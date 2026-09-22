@@ -102,7 +102,9 @@ cd haccp_agent
                        -AgentName "Cuisine - Établissement Centre"
 ```
 
-Le script installe l'agent dans `C:\Program Files\HaccpAgent`, télécharge
+Le script installe l'agent dans `C:\HaccpAgent` (volontairement sans espace
+dans le chemin : NSSM 2.24 ne transmet pas de façon fiable les arguments
+contenant des espaces depuis PowerShell), télécharge
 NSSM si besoin, et crée le service Windows `HaccpAgent` (démarrage
 automatique). Les données mutables (file d'impression, config, logs) sont
 stockées à part, dans `C:\ProgramData\HaccpAgent` (et non sous
