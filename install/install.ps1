@@ -67,11 +67,22 @@ if (-not (Test-Path $NssmPath)) {
 }
 
 Write-Host "==> Installation du service Windows ($ServiceName)..."
-& $NssmPath stop $ServiceName 2>$null | Out-Null
-& $NssmPath remove $ServiceName confirm 2>$null | Out-Null
+# On n'appelle stop/remove que si le service existe déjà (sinon NSSM affiche une
+# boîte de dialogue "Impossible d'ouvrir le service" qui bloque le script tant
+# qu'on ne clique pas OK, même si l'erreur est en réalité anodine).
+if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+  Write-Host "==> Service existant détecté, arrêt/suppression avant réinstallation..."
+  & $NssmPath stop $ServiceName | Out-Null
+  Start-Sleep -Seconds 1
+  & $NssmPath remove $ServiceName confirm | Out-Null
+}
 
 $NodeExe = (Get-Command node).Source
 & $NssmPath install $ServiceName $NodeExe "`"$InstallDir\src\launcher.js`""
+if ($LASTEXITCODE -ne 0) {
+  Write-Error "nssm install a échoué (code $LASTEXITCODE). Vérifiez qu'aucune fenêtre 'Services' ou 'gestionnaire de tâches' ne bloque le service, puis relancez."
+  exit 1
+}
 & $NssmPath set $ServiceName AppDirectory $InstallDir
 & $NssmPath set $ServiceName DisplayName "HACCP Local Agent"
 & $NssmPath set $ServiceName Description "Pont imprimantes reseau/USB/Bluetooth pour l'application HACCP"
