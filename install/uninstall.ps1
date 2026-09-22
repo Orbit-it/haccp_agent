@@ -3,6 +3,7 @@
 
 param(
   [string]$InstallDir = "C:\Program Files\HaccpAgent",
+  [string]$DataDir = "C:\ProgramData\HaccpAgent",
   [string]$ServiceName = "HaccpAgent",
   [switch]$Purge
 )
@@ -20,9 +21,10 @@ if (Test-Path $NssmPath) {
 }
 
 if ($Purge) {
-  Write-Host "==> Suppression de $InstallDir..."
+  Write-Host "==> Suppression de $InstallDir et $DataDir..."
   Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
+  Remove-Item -Recurse -Force $DataDir -ErrorAction SilentlyContinue
   Write-Host "✅ Agent HACCP entièrement supprimé"
 } else {
-  Write-Host "✅ Service désinstallé (fichiers conservés dans $InstallDir, relancez avec -Purge pour tout supprimer)"
+  Write-Host "✅ Service désinstallé (fichiers conservés dans $InstallDir et $DataDir, relancez avec -Purge pour tout supprimer)"
 }

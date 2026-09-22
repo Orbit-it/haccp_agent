@@ -13,6 +13,12 @@ param(
   [Parameter(Mandatory=$true)] [string]$AgentKey,
   [string]$AgentName = $env:COMPUTERNAME,
   [string]$InstallDir = "C:\Program Files\HaccpAgent",
+  # Les données mutables (file d'impression, config, logs) ne vont PAS sous
+  # Program Files : ce dossier est prévu pour du contenu en lecture seule et
+  # certaines machines (durcissement sécurité, antivirus) refusent la création
+  # de sous-dossiers par le service qui y tourne, même en LocalSystem.
+  # ProgramData est l'emplacement standard Windows pour ce type de données.
+  [string]$DataDir = "C:\ProgramData\HaccpAgent",
   [string]$ServiceName = "HaccpAgent"
 )
 
@@ -52,8 +58,12 @@ Push-Location $InstallDir
 npm install --omit=dev --no-audit --no-fund
 Pop-Location
 
-$StateDir = Join-Path $InstallDir "state"
+Write-Host "==> Préparation du dossier de données ($DataDir)..."
+$StateDir = $DataDir
 New-Item -ItemType Directory -Force -Path $StateDir | Out-Null
+# Ceinture et bretures : force l'accès complet à SYSTEM et Administrateurs,
+# au cas où l'ACL héritée du parent serait restrictive.
+icacls $StateDir /grant "SYSTEM:(OI)(CI)F" "BUILTIN\Administrators:(OI)(CI)F" /T | Out-Null
 
 # --- NSSM (Non-Sucking Service Manager) : wrapper de service pour un exécutable classique ---
 $NssmPath = Join-Path $InstallDir "nssm.exe"
@@ -101,6 +111,7 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host ""
 Write-Host "✅ Agent HACCP installé et démarré (service Windows: $ServiceName)"
 Write-Host "   Statut : Get-Service $ServiceName"
+Write-Host "   Données/logs : $StateDir"
 Write-Host "   Logs   : $StateDir\agent.log"
 Write-Host ""
 Write-Host "Note Bluetooth : appairez l'imprimante depuis les paramètres Bluetooth Windows," 

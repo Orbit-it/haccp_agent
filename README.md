@@ -104,11 +104,13 @@ cd haccp_agent
 
 Le script installe l'agent dans `C:\Program Files\HaccpAgent`, télécharge
 NSSM si besoin, et crée le service Windows `HaccpAgent` (démarrage
-automatique).
+automatique). Les données mutables (file d'impression, config, logs) sont
+stockées à part, dans `C:\ProgramData\HaccpAgent` (et non sous
+`Program Files`, qui doit rester en lecture seule).
 
 ```powershell
 Get-Service HaccpAgent
-Get-Content "C:\Program Files\HaccpAgent\state\agent.log" -Wait
+Get-Content "C:\ProgramData\HaccpAgent\agent.log" -Wait
 .\install\uninstall.ps1 -Purge
 ```
 
