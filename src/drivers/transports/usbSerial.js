@@ -23,7 +23,11 @@ function loadSerialPortLib() {
   }
 }
 
-function sendSerial({ path, baudRate = 9600, timeoutMs = 8000, quietMs = 400 }, buffer) {
+// `warmupMs` : délai après l'ouverture du port avant d'écrire. De nombreuses
+// imprimantes thermiques Bluetooth (SPP) bon marché ignorent les premiers
+// octets reçus juste après l'établissement de la connexion — un court délai
+// évite de perdre le début du ticket.
+function sendSerial({ path, baudRate = 9600, timeoutMs = 8000, quietMs = 400, warmupMs = 250 }, buffer) {
   const SerialPort = loadSerialPortLib();
 
   return new Promise((resolve, reject) => {
@@ -53,10 +57,21 @@ function sendSerial({ path, baudRate = 9600, timeoutMs = 8000, quietMs = 400 }, 
 
     port.open((err) => {
       if (err) return finish(err);
-      port.write(buffer, (writeErr) => {
-        if (writeErr) return finish(writeErr);
-        scheduleQuiet();
-      });
+      // Laisse le temps à la liaison Bluetooth/série de se stabiliser avant
+      // d'envoyer le premier octet.
+      setTimeout(() => {
+        if (settled) return;
+        port.write(buffer, (writeErr) => {
+          if (writeErr) return finish(writeErr);
+          // `drain` attend que le buffer d'écriture soit réellement transmis
+          // (pas seulement accepté par l'OS) avant de fermer le port : sans
+          // ça, un ticket un peu long peut être tronqué sur un lien BT lent.
+          port.drain((drainErr) => {
+            if (drainErr) return finish(drainErr);
+            scheduleQuiet();
+          });
+        });
+      }, warmupMs);
     });
 
     port.on('data', (data) => {
